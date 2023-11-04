@@ -1,3 +1,4 @@
 /target
 /src/config.rs
 /.vscode
+Secrets.toml
