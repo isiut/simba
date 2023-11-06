@@ -4,7 +4,10 @@ pub mod config;
 use config::DISCORD_TOKEN;
 
 pub mod commands;
-use commands::{ip::ip, ping::ping, poll::poll, weather::timezone, weather::weather};
+use commands::{
+    ip::ip, ping::ping, poll::poll, random::coinflip, random::diceroll, random::rng,
+    weather::timezone, weather::weather,
+};
 
 pub struct Data {} // User data, which is stored and accessible in all command invocations
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -14,7 +17,16 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 async fn main() {
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![ping(), poll(), weather(), ip(), timezone()],
+            commands: vec![
+                ping(),
+                poll(),
+                weather(),
+                ip(),
+                timezone(),
+                coinflip(),
+                diceroll(),
+                rng(),
+            ],
             ..Default::default()
         })
         .token(DISCORD_TOKEN)
