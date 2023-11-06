@@ -1,6 +1,8 @@
 use crate::{config::OPENWEATHER_API_KEY, Context, Error};
 extern crate openweathermap;
 use openweathermap::weather as weather_api;
+extern crate chrono;
+use chrono::{Duration, Utc};
 
 #[derive(poise::ChoiceParameter)]
 pub enum UnitChoices {
@@ -53,5 +55,29 @@ pub async fn weather(
 
     ctx.say(result).await?;
 
+    Ok(())
+}
+
+#[poise::command(slash_command)]
+pub async fn timezone(
+    ctx: Context<'_>,
+    #[description = "Location"] location: String,
+) -> Result<(), Error> {
+    let result = match &weather_api(&location, "imperial", "en", OPENWEATHER_API_KEY).await {
+        Ok(current) => {
+            let now = Utc::now();
+            let offset = current.timezone;
+            let local_time = now + Duration::seconds(offset);
+            let formatted_time = local_time.format("%B %d, %Y **%I:%M %p**").to_string();
+            format!(
+                "Time for {}, {}: {}",
+                current.name.as_str(),
+                current.sys.country,
+                formatted_time
+            )
+        }
+        Err(e) => format!("Could not fetch weather because: {}", e),
+    };
+    ctx.say(result).await?;
     Ok(())
 }
