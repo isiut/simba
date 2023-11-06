@@ -12,6 +12,7 @@ pub enum UnitChoices {
     Imperial,
 }
 
+/// Get the weather for a location
 #[poise::command(slash_command)]
 pub async fn weather(
     ctx: Context<'_>,
@@ -58,6 +59,7 @@ pub async fn weather(
     Ok(())
 }
 
+/// Get the current time for a location
 #[poise::command(slash_command)]
 pub async fn timezone(
     ctx: Context<'_>,

@@ -1,6 +1,7 @@
 use crate::{Context, Error};
 use poise::serenity_prelude::ReactionType;
 
+/// Create a poll
 #[poise::command(slash_command)]
 pub async fn poll(
     ctx: Context<'_>,

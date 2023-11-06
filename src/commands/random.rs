@@ -2,6 +2,7 @@ use crate::{Context, Error};
 extern crate rand;
 use rand::prelude::*;
 
+/// Flip a coin
 #[poise::command(slash_command)]
 pub async fn coinflip(ctx: Context<'_>) -> Result<(), Error> {
     let choice: f64 = rand::thread_rng().gen::<f64>().round();
@@ -13,6 +14,7 @@ pub async fn coinflip(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
+/// Roll a die
 #[poise::command(slash_command)]
 pub async fn diceroll(
     ctx: Context<'_>,
@@ -29,6 +31,7 @@ pub async fn diceroll(
     Ok(())
 }
 
+/// Generate a random number
 #[poise::command(slash_command)]
 pub async fn rng(
     ctx: Context<'_>,
