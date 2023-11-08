@@ -6,7 +6,7 @@ use config::DISCORD_TOKEN;
 pub mod commands;
 use commands::{
     ip::ip, ping::ping, poll::poll, random::coinflip, random::diceroll, random::rng,
-    weather::timezone, weather::weather,
+    remind::remind, weather::timezone, weather::weather,
 };
 
 pub struct Data {} // User data, which is stored and accessible in all command invocations
@@ -26,6 +26,7 @@ async fn main() {
                 coinflip(),
                 diceroll(),
                 rng(),
+                remind(),
             ],
             ..Default::default()
         })

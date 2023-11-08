@@ -11,3 +11,4 @@ tokio = { version = "1.4.0", features = ["rt-multi-thread"] }
 openweathermap = "0.2.4"
 chrono = "0.4.31"
 rand = "0.8.5"
+mongodb = "2.7.1"
