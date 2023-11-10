@@ -6,7 +6,7 @@ use config::DISCORD_TOKEN;
 pub mod commands;
 use commands::{
     ip::ip, ping::ping, poll::poll, random::coinflip, random::diceroll, random::rng,
-    remind::remind, weather::timezone, weather::weather,
+    remind::check_reminders, remind::remind, weather::timezone, weather::weather,
 };
 
 pub struct Data {} // User data, which is stored and accessible in all command invocations
@@ -15,6 +15,8 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 
 #[tokio::main]
 async fn main() {
+    tokio::spawn(check_reminders());
+
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
             commands: vec![
