@@ -42,11 +42,13 @@ pub async fn remind(
         Some(time) => {
             let mongodb_uri = MONGODB_URI;
 
+            // Connect to the database
             let client_options = ClientOptions::parse(mongodb_uri).await.map_err(|e| {
                 eprintln!("Failed to parse MongoDB URI: {}", e);
                 Error::from(e)
             })?;
 
+            // Create the client
             let client = Client::with_options(client_options).map_err(|e| {
                 eprintln!("Failed to create MongoDB client: {}", e);
                 Error::from(e)
@@ -55,20 +57,22 @@ pub async fn remind(
             let db = client.database("Remind");
             let collection = db.collection("Remind");
 
+            // Create the database entry
             let caller = ctx.author();
             let remind_date = (Utc::now() + time).timestamp();
-
             let document = doc! {
                 "user": caller.to_string(),
                 "message": &message,
                 "date": remind_date,
             };
 
+            // Insert into the database
             if let Err(err) = collection.insert_one(document, None).await {
                 eprintln!("Failed to insert document into MongoDB: {}", err);
                 return Err(Error::from(err));
             }
 
+            // Success message
             let response = format!("You will be reminded of '{}' in {}", message, wait_for);
             ctx.say(&response).await?;
 
@@ -76,6 +80,7 @@ pub async fn remind(
             dm.say(&ctx, response).await?;
         }
         None => {
+            // Failure message
             let response = "There was an error adding your reminder. Please check that you set the time correctly. The valid durations are s, m, h, d, w.".to_string();
             ctx.say(response).await?;
         }
@@ -86,7 +91,6 @@ pub async fn remind(
 
 async fn send_reminder(user_id: Option<&str>, message: Option<&str>) -> Result<(), Error> {
     // Parse the user ID string into a UserId
-
     let user_id = if let Some(mention_str) = user_id {
         let numeric_part: String = mention_str.chars().filter(|c| c.is_ascii_digit()).collect();
         match numeric_part.parse::<u64>() {
@@ -101,6 +105,7 @@ async fn send_reminder(user_id: Option<&str>, message: Option<&str>) -> Result<(
         return Err(Error::from("User ID not provided"));
     };
 
+    // Create the user
     let http = Http::new(DISCORD_TOKEN);
     let user = match user_id.to_user(&http).await {
         Ok(user) => user,
@@ -110,6 +115,7 @@ async fn send_reminder(user_id: Option<&str>, message: Option<&str>) -> Result<(
         }
     };
 
+    // DM the reminder
     if let Some(message) = message {
         let dm = user.create_dm_channel(&http).await?;
         dm.say(http, message).await?;
@@ -122,11 +128,13 @@ pub async fn check_reminders() -> Result<(), Error> {
     loop {
         let mongodb_uri = MONGODB_URI;
 
+        // Connect to the database
         let client_options = ClientOptions::parse(mongodb_uri).await.map_err(|e| {
             eprintln!("Failed to parse MongoDB URI: {}", e);
             Error::from(e)
         })?;
 
+        // Create the client
         let client = Client::with_options(client_options).map_err(|e| {
             eprintln!("Failed to create MongoDB client: {}", e);
             Error::from(e)
@@ -135,6 +143,7 @@ pub async fn check_reminders() -> Result<(), Error> {
         let db = client.database("Remind");
         let collection = db.collection::<Document>("Remind");
 
+        // Search for reminder entries
         let filter = doc! {};
         let find_options = FindOptions::builder().build();
         let mut cursor = collection.find(filter, find_options).await?;
@@ -145,6 +154,7 @@ pub async fn check_reminders() -> Result<(), Error> {
                     continue;
                 }
 
+                // Delete the sent reminder from the database
                 if let Some(user) = reminder.get("user") {
                     if let Some(message) = reminder.get("message") {
                         match send_reminder(user.as_str(), message.as_str()).await {
