@@ -76,9 +76,7 @@ pub async fn remind(
             dm.say(&ctx, response).await?;
         }
         None => {
-            let response = format!(
-                "There was an error adding your reminder. Please check that you set the time correctly. The valid durations are s, m, h, d, w."
-            );
+            let response = "There was an error adding your reminder. Please check that you set the time correctly. The valid durations are s, m, h, d, w.".to_string();
             ctx.say(response).await?;
         }
     }
@@ -143,34 +141,35 @@ pub async fn check_reminders() -> Result<(), Error> {
 
         while let Some(reminder) = cursor.try_next().await? {
             if let Some(date) = reminder.get("date") {
-                if date.as_i64().unwrap() <= Utc::now().timestamp() {
-                    if let Some(user) = reminder.get("user") {
-                        if let Some(message) = reminder.get("message") {
-                            match send_reminder(user.as_str(), message.as_str()).await {
-                                Ok(_) => {
-                                    if let Some(reminder_id) = reminder.get("_id") {
-                                        let filter = doc! { "_id": reminder_id.clone() };
-                                        let delete_result =
-                                            collection.delete_one(filter, None).await;
-                                        match delete_result {
-                                            Ok(_) => println!("Reminder deleted successfully"),
-                                            Err(e) => eprintln!("Failed to delete reminder: {}", e),
-                                        }
+                if date.as_i64().unwrap() > Utc::now().timestamp() {
+                    continue;
+                }
+
+                if let Some(user) = reminder.get("user") {
+                    if let Some(message) = reminder.get("message") {
+                        match send_reminder(user.as_str(), message.as_str()).await {
+                            Ok(_) => {
+                                if let Some(reminder_id) = reminder.get("_id") {
+                                    let filter = doc! { "_id": reminder_id.clone() };
+                                    match collection.delete_one(filter, None).await {
+                                        Ok(_) => println!("Reminder deleted successfully"),
+                                        Err(e) => eprintln!("Failed to delete reminder: {}", e),
                                     }
                                 }
-                                Err(e) => println!("{}", e),
-                            };
-                        } else {
-                            println!("Incorrect message value")
+                            }
+                            Err(e) => println!("{}", e),
                         }
                     } else {
-                        println!("Incorrect user value!")
+                        println!("Incorrect message value")
                     }
+                } else {
+                    println!("Incorrect user value!")
                 }
             } else {
                 println!("Incorrect date value!");
             }
         }
+
         sleep(TokioDuration::from_secs(30)).await;
     }
 }

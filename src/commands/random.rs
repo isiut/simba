@@ -23,9 +23,9 @@ pub async fn diceroll(
     let result = match sides {
         sides if sides > 1 => {
             let choice = rand::thread_rng().gen_range(1..sides);
-            format!("{}", choice.to_string())
+            format!("{}", choice)
         }
-        _ => format!("Enter a number that is greater than 1"),
+        _ => "Enter a number that is greater than 1".to_string(),
     };
     ctx.say(result).await?;
     Ok(())
@@ -41,9 +41,9 @@ pub async fn rng(
     let result = match (min, max) {
         _correct_values if min < max => {
             let choice = rand::thread_rng().gen_range(min..max);
-            format!("{}", choice.to_string())
+            format!("{}", choice)
         }
-        _ => format!("Min should be less than max"),
+        _ => "Min should be less than max".to_string(),
     };
     ctx.say(result).await?;
     Ok(())
