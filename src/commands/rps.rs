@@ -23,7 +23,7 @@ pub async fn rps(
         WeaponChoices::Paper,
         WeaponChoices::Scissors,
     ];
-    let bot_choice = weapons[rand::thread_rng().gen_range(0..2)];
+    let bot_choice = weapons[rand::thread_rng().gen_range(0..=2)];
 
     // Key beats value
     let beats = HashMap::from([
