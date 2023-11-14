@@ -47,7 +47,7 @@ pub async fn rps(
         }
         (user_choice, bot_choice) if beats.get(&bot_choice) == Some(&user_choice) => {
             format!(
-                "You chose {} lost!\nThe bot chose {:?}.",
+                "You chose {} and you lost!\nThe bot chose {:?}.",
                 user_choice, bot_choice
             )
         }
