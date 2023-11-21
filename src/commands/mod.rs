@@ -1,3 +1,4 @@
+pub mod birthday;
 pub mod ip;
 pub mod ping;
 pub mod poll;
