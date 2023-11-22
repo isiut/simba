@@ -5,8 +5,17 @@ use config::DISCORD_TOKEN;
 
 pub mod commands;
 use commands::{
-    birthday::birthday, ip::ip, ping::ping, poll::poll, random::coinflip, random::diceroll,
-    random::rng, remind::check_reminders, remind::remind, rps::rps, weather::timezone,
+    // birthday::birthday,
+    ip::ip,
+    ping::ping,
+    poll::poll,
+    random::coinflip,
+    random::diceroll,
+    random::rng,
+    remind::check_reminders,
+    remind::remind,
+    rps::rps,
+    weather::timezone,
     weather::weather,
 };
 
@@ -31,7 +40,7 @@ async fn main() {
                 rng(),
                 remind(),
                 rps(),
-                birthday(),
+                // birthday(),
             ],
             ..Default::default()
         })
