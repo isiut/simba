@@ -1,153 +1,172 @@
-// use crate::{
-//     config::{DISCORD_TOKEN, MONGODB_URI},
-//     Context, Error,
-// };
-// use mongodb::{
-//     bson::{doc, Document},
-//     options::{ClientOptions, FindOptions},
-//     Client,
-// };
+use std::time::Duration;
 
-// extern crate chrono;
-// use chrono::{Datelike, Duration, NaiveDate, Utc};
-// use futures::stream::TryStreamExt;
-// use poise::serenity_prelude::{http::Http, model::prelude::UserId};
-// use tokio::time::{sleep, Duration as TokioDuration};
+use crate::{
+    config::{BIRTHDAY_CHANNEL, DISCORD_TOKEN, MONGODB_URI},
+    Context, Error,
+};
+use mongodb::{
+    bson::{doc, Document},
+    options::{ClientOptions, FindOptions},
+    Client,
+};
 
-// /// Set your birthday
-// #[poise::command(slash_command)]
-// pub async fn birthday(
-//     ctx: Context<'_>,
-//     #[description = "month"] month: i32,
-//     #[description = "day"] day: i32,
-// ) -> Result<(), Error> {
-//     if !(day > 0 && day <= 31) {
-//         ctx.say("Incorrect day value.").await?;
-//         return Err(Error::from("Incorrect day value"));
-//     }
+extern crate chrono;
+use chrono::{Datelike, NaiveDate, Utc};
+use futures::stream::TryStreamExt;
+use poise::serenity_prelude::{ChannelId, Http};
+use tokio::time::sleep;
 
-//     if !(month > 0 && month <= 12) {
-//         ctx.say("Incorrect month value.").await?;
-//         return Err(Error::from("Incorrect month value"));
-//     }
+/// Set your birthday
+#[poise::command(slash_command)]
+pub async fn birthday(
+    ctx: Context<'_>,
+    #[description = "month"] month: i32,
+    #[description = "day"] day: i32,
+) -> Result<(), Error> {
+    if !(day > 0 && day <= 31) {
+        ctx.say("Incorrect day value.").await?;
+        return Err(Error::from("Incorrect day value"));
+    }
 
-//     let current_year = Utc::now().year();
-//     let mut birthday_naive = NaiveDate::from_ymd(current_year, month as u32, day as u32);
+    if !(month > 0 && month <= 12) {
+        ctx.say("Incorrect month value.").await?;
+        return Err(Error::from("Incorrect month value"));
+    }
 
-//     let _document = doc! {
-//         "user": ctx.author().to_string(),
-//         "next_date": "abc",
-//     };
+    let current_year = Utc::now().year();
+    let mut birthday_naive = NaiveDate::from_ymd_opt(current_year, month as u32, day as u32)
+        .expect("birthday date error");
+    if birthday_naive < Utc::now().date_naive() {
+        birthday_naive = NaiveDate::from_ymd_opt(current_year + 1, month as u32, day as u32)
+            .expect("birthday date error");
+    }
+    let next_birthday = birthday_naive
+        .and_hms_opt(0, 0, 0)
+        .expect("birthday date error")
+        .timestamp();
 
-//     Ok(())
-// }
+    let doc = doc! {
+        "user": ctx.author().to_string(),
+        "next_date": next_birthday,
+    };
 
-// async fn add_birthday(ctx: Context<'_>, doc: Document) -> Result<(), Error> {
-//     let mongodb_uri = MONGODB_URI;
+    add_birthday(ctx, doc).await?;
 
-//     // Connect to the database
-//     let client_options = ClientOptions::parse(mongodb_uri).await.map_err(|e| {
-//         eprintln!("Failed to parse MongoDB URI: {}", e);
-//         Error::from(e)
-//     })?;
+    Ok(())
+}
 
-//     // Create the client
-//     let client = Client::with_options(client_options).map_err(|e| {
-//         eprintln!("Failed to create MongoDB client: {}", e);
-//         Error::from(e)
-//     })?;
+async fn add_birthday(ctx: Context<'_>, doc: Document) -> Result<(), Error> {
+    let mongodb_uri = MONGODB_URI;
 
-//     let db = client.database("Birthday");
-//     let collection = db.collection("Birthday");
+    // Connect to the database
+    let client_options = ClientOptions::parse(mongodb_uri).await.map_err(|e| {
+        eprintln!("Failed to parse MongoDB URI: {}", e);
+        Error::from(e)
+    })?;
 
-//     // Insert into the database
-//     if let Err(err) = collection.insert_one(doc, None).await {
-//         let response = format!("Your birthday was not set: {}", err);
-//         eprintln!("{}", response);
-//         ctx.say(response).await?;
-//         return Err(Error::from(err));
-//     }
+    // Create the client
+    let client = Client::with_options(client_options).map_err(|e| {
+        eprintln!("Failed to create MongoDB client: {}", e);
+        Error::from(e)
+    })?;
 
-//     Ok(())
-// }
+    let db = client.database("Birthday");
+    let collection = db.collection("Birthday");
 
-// async fn send_birthday(user_id: Option<&str>, month: Option<&str>) -> Result<(), Error> {
-//     // Parse the user ID string into a UserId
-//     let user_id = if let Some(mention_str) = user_id {
-//         let numeric_part: String = mention_str.chars().filter(|c| c.is_ascii_digit()).collect();
-//         match numeric_part.parse::<u64>() {
-//             Ok(id) => UserId(id),
-//             Err(err) => {
-//                 println!("Invalid user ID: '{:?}'", numeric_part.parse::<u64>());
-//                 return Err(Error::from(err));
-//             }
-//         }
-//     } else {
-//         println!("User ID not provided");
-//         return Err(Error::from("User ID not provided"));
-//     };
+    // Insert into the database
+    if let Err(err) = collection.insert_one(doc, None).await {
+        let response = format!("Your birthday was not set: {}", err);
+        eprintln!("{}", response);
+        ctx.say(response).await?;
+        return Err(Error::from(err));
+    }
 
-//     todo!();
+    ctx.say("Birthday added successfully.").await?;
 
-//     Ok(())
-// }
+    Ok(())
+}
 
-// pub async fn check_birthdays() -> Result<(), Error> {
-//     loop {
-//         let mongodb_uri = MONGODB_URI;
+async fn send_birthday(user_id: Option<&str>) -> Result<(), Error> {
+    let message = format!("Happy birthday {}", user_id.unwrap_or("error"));
+    let http = Http::new(DISCORD_TOKEN);
+    ChannelId(BIRTHDAY_CHANNEL).say(http, message).await?;
 
-//         // Connect to the database
-//         let client_options = ClientOptions::parse(mongodb_uri).await.map_err(|e| {
-//             eprintln!("Failed to parse MongoDB URI: {}", e);
-//             Error::from(e)
-//         })?;
+    Ok(())
+}
 
-//         // Create the client
-//         let client = Client::with_options(client_options).map_err(|e| {
-//             eprintln!("Failed to create MongoDB client: {}", e);
-//             Error::from(e)
-//         })?;
+pub async fn check_birthdays() -> Result<(), Error> {
+    loop {
+        let mongodb_uri = MONGODB_URI;
 
-//         let db = client.database("Remind");
-//         let collection = db.collection::<Document>("Remind");
+        // Connect to the database
+        let client_options = ClientOptions::parse(mongodb_uri).await.map_err(|e| {
+            eprintln!("Failed to parse MongoDB URI: {}", e);
+            Error::from(e)
+        })?;
 
-//         // Search for reminder entries
-//         let filter = doc! {};
-//         let find_options = FindOptions::builder().build();
-//         let mut cursor = collection.find(filter, find_options).await?;
+        // Create the client
+        let client = Client::with_options(client_options).map_err(|e| {
+            eprintln!("Failed to create MongoDB client: {}", e);
+            Error::from(e)
+        })?;
 
-//         while let Some(reminder) = cursor.try_next().await? {
-//             if let Some(date) = reminder.get("date") {
-//                 if date.as_i64().unwrap() > Utc::now().timestamp() {
-//                     continue;
-//                 }
+        let db = client.database("Birthday");
+        let collection = db.collection::<Document>("Birthday");
 
-//                 // Delete the sent reminder from the database
-//                 if let Some(user) = reminder.get("user") {
-//                     if let Some(message) = reminder.get("message") {
-//                         match send_reminder(user.as_str(), message.as_str()).await {
-//                             Ok(_) => {
-//                                 if let Some(reminder_id) = reminder.get("_id") {
-//                                     let filter = doc! { "_id": reminder_id.clone() };
-//                                     match collection.delete_one(filter, None).await {
-//                                         Ok(_) => println!("Reminder deleted successfully"),
-//                                         Err(e) => eprintln!("Failed to delete reminder: {}", e),
-//                                     }
-//                                 }
-//                             }
-//                             Err(e) => println!("{}", e),
-//                         }
-//                     } else {
-//                         println!("Incorrect message value")
-//                     }
-//                 } else {
-//                     println!("Incorrect user value!")
-//                 }
-//             } else {
-//                 println!("Incorrect date value!");
-//             }
-//         }
+        // Search for birthday entries
+        let filter = doc! {};
+        let find_options = FindOptions::builder().build();
+        let mut cursor = collection.find(filter, find_options).await?;
 
-//         sleep(TokioDuration::from_secs(86400)).await;
-//     }
-// }
+        while let Some(birthday) = cursor.try_next().await? {
+            if let Some(date) = birthday.get("next_date") {
+                if date.as_i64().unwrap() > Utc::now().timestamp() {
+                    continue;
+                }
+
+                // Send birthday and set it to one year later
+                if let Some(user) = birthday.get("user") {
+                    if let Some(date) = birthday.get("next_date") {
+                        match send_birthday(user.as_str()).await {
+                            Ok(_) => {
+                                if let Some(birthday_id) = birthday.get("_id") {
+                                    let filter = doc! { "_id": birthday_id.clone() };
+                                    match collection.delete_one(filter, None).await {
+                                        Ok(_) => {
+                                            println!("birthday deleted successfully");
+
+                                            let seconds_in_year = 31_536_000;
+                                            let doc = doc! {
+                                                "user": user,
+                                                "next_date": date.as_i64().unwrap() + seconds_in_year as i64
+                                            };
+
+                                            if let Err(err) = collection.insert_one(doc, None).await
+                                            {
+                                                eprintln!(
+                                                    "Error adding one year to past birthday: {}",
+                                                    err
+                                                );
+                                                return Err(Error::from(err));
+                                            }
+                                        }
+                                        Err(e) => eprintln!("Failed to delete birthday: {}", e),
+                                    }
+                                }
+                            }
+                            Err(e) => println!("{}", e),
+                        }
+                    } else {
+                        println!("Incorrect message value")
+                    }
+                } else {
+                    println!("Incorrect user value!")
+                }
+            } else {
+                println!("Incorrect date value!");
+            }
+        }
+
+        sleep(Duration::from_secs(86400)).await;
+    }
+}

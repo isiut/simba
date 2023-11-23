@@ -5,7 +5,7 @@ use config::DISCORD_TOKEN;
 
 pub mod commands;
 use commands::{
-    // birthday::birthday,
+    birthday::{birthday, check_birthdays},
     ip::ip,
     ping::ping,
     poll::poll,
@@ -26,6 +26,7 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 #[tokio::main]
 async fn main() {
     tokio::spawn(check_reminders());
+    tokio::spawn(check_birthdays());
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
@@ -40,7 +41,7 @@ async fn main() {
                 rng(),
                 remind(),
                 rps(),
-                // birthday(),
+                birthday(),
             ],
             ..Default::default()
         })
